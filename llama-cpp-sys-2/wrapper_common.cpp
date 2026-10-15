@@ -187,7 +187,8 @@ static void llama_rs_assign_tokens(
     dst.assign(tokens, tokens + count);
 }
 
-extern "C" struct llama_rs_mtp_speculative * llama_rs_mtp_speculative_init(
+static struct llama_rs_mtp_speculative * llama_rs_speculative_init(
+    enum common_speculative_type type,
     struct llama_context * ctx_tgt,
     struct llama_context * ctx_dft,
     int32_t n_max,
@@ -199,7 +200,7 @@ extern "C" struct llama_rs_mtp_speculative * llama_rs_mtp_speculative_init(
 
     try {
         auto wrapper = std::make_unique<llama_rs_mtp_speculative>();
-        wrapper->params.types = { COMMON_SPECULATIVE_TYPE_DRAFT_MTP };
+        wrapper->params.types = { type };
         wrapper->params.draft.ctx_tgt = ctx_tgt;
         wrapper->params.draft.ctx_dft = ctx_dft;
         wrapper->params.draft.n_max = n_max;
@@ -215,6 +216,24 @@ extern "C" struct llama_rs_mtp_speculative * llama_rs_mtp_speculative_init(
     } catch (...) {
         return nullptr;
     }
+}
+
+extern "C" struct llama_rs_mtp_speculative * llama_rs_mtp_speculative_init(
+    struct llama_context * ctx_tgt,
+    struct llama_context * ctx_dft,
+    int32_t n_max,
+    int32_t n_min,
+    float p_min) {
+    return llama_rs_speculative_init(COMMON_SPECULATIVE_TYPE_DRAFT_MTP, ctx_tgt, ctx_dft, n_max, n_min, p_min);
+}
+
+extern "C" struct llama_rs_mtp_speculative * llama_rs_dflash_speculative_init(
+    struct llama_context * ctx_tgt,
+    struct llama_context * ctx_dft,
+    int32_t n_max,
+    int32_t n_min,
+    float p_min) {
+    return llama_rs_speculative_init(COMMON_SPECULATIVE_TYPE_DRAFT_DFLASH, ctx_tgt, ctx_dft, n_max, n_min, p_min);
 }
 
 extern "C" void llama_rs_mtp_speculative_free(struct llama_rs_mtp_speculative * spec) {

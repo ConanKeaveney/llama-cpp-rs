@@ -51,8 +51,9 @@ pub enum MtpSpeculativeError {
 #[derive(Debug)]
 pub struct MtpSpeculative<'model> {
     raw: Ptr<llama_cpp_sys_2::llama_rs_mtp_speculative>,
-    target_context: LlamaContext<'model>,
+    // Declared before the target: a draft context made with `ctx_other` reads the target's memory.
     draft_context: LlamaContext<'model>,
+    target_context: LlamaContext<'model>,
     n_max: usize,
 }
 
@@ -69,9 +70,51 @@ impl<'model> MtpSpeculative<'model> {
     /// Returns an error if parameters are invalid or llama.cpp cannot
     /// initialize the speculative implementation for the loaded model.
     pub fn new(
+        target_context: LlamaContext<'model>,
+        draft_context: LlamaContext<'model>,
+        params: MtpSpeculativeParams,
+    ) -> Result<Self, MtpSpeculativeError> {
+        Self::with_init(
+            target_context,
+            draft_context,
+            params,
+            llama_cpp_sys_2::llama_rs_mtp_speculative_init,
+        )
+    }
+
+    /// Create a speculative helper that drafts with a DFlash block-diffusion model.
+    ///
+    /// The draft context must be made with the target as its `ctx_other`
+    /// (see [`crate::model::LlamaModel::new_context_with_ctx_other`]).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if parameters are invalid or llama.cpp cannot
+    /// initialize DFlash drafting for the loaded models.
+    pub fn new_dflash(
+        target_context: LlamaContext<'model>,
+        draft_context: LlamaContext<'model>,
+        params: MtpSpeculativeParams,
+    ) -> Result<Self, MtpSpeculativeError> {
+        Self::with_init(
+            target_context,
+            draft_context,
+            params,
+            llama_cpp_sys_2::llama_rs_dflash_speculative_init,
+        )
+    }
+
+    fn with_init(
         mut target_context: LlamaContext<'model>,
         mut draft_context: LlamaContext<'model>,
         params: MtpSpeculativeParams,
+        init: unsafe extern "C" fn(
+            *mut llama_cpp_sys_2::llama_context,
+            *mut llama_cpp_sys_2::llama_context,
+            i32,
+            i32,
+            f32,
+        ) -> *mut llama_cpp_sys_2::llama_rs_mtp_speculative,
     ) -> Result<Self, MtpSpeculativeError> {
         if params.n_max <= 0 || params.n_min < 0 || params.n_min > params.n_max {
             return Err(MtpSpeculativeError::InvalidParams);
@@ -80,7 +123,7 @@ impl<'model> MtpSpeculative<'model> {
             usize::try_from(params.n_max).map_err(|_| MtpSpeculativeError::InvalidParams)?;
 
         let raw = unsafe {
-            llama_cpp_sys_2::llama_rs_mtp_speculative_init(
+            init(
                 target_context.context.as_mut_ptr(),
                 draft_context.context.as_mut_ptr(),
                 params.n_max,
@@ -92,8 +135,8 @@ impl<'model> MtpSpeculative<'model> {
 
         Ok(Self {
             raw,
-            target_context,
             draft_context,
+            target_context,
             n_max,
         })
     }

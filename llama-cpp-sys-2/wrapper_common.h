@@ -68,6 +68,13 @@ struct llama_rs_mtp_speculative * llama_rs_mtp_speculative_init(
     int32_t n_min,
     float p_min);
 
+struct llama_rs_mtp_speculative * llama_rs_dflash_speculative_init(
+    struct llama_context * ctx_tgt,
+    struct llama_context * ctx_dft,
+    int32_t n_max,
+    int32_t n_min,
+    float p_min);
+
 void llama_rs_mtp_speculative_free(struct llama_rs_mtp_speculative * spec);
 
 llama_rs_status llama_rs_mtp_speculative_begin(
