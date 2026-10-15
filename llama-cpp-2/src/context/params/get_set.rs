@@ -85,6 +85,29 @@ impl LlamaContextParams {
         self
     }
 
+    /// Set the most outputs one sequence may have in a ubatch, which a backend sampler needs to
+    /// cover every drafted position.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use llama_cpp_2::context::params::LlamaContextParams;
+    /// let params = LlamaContextParams::default()
+    ///     .with_n_outputs_max_per_seq(16);
+    /// assert_eq!(params.n_outputs_max_per_seq(), 16);
+    /// ```
+    #[must_use]
+    pub fn with_n_outputs_max_per_seq(mut self, n: u32) -> Self {
+        self.context_params.n_outputs_max_per_seq = n;
+        self
+    }
+
+    /// Get the `n_outputs_max_per_seq`
+    #[must_use]
+    pub fn n_outputs_max_per_seq(&self) -> u32 {
+        self.context_params.n_outputs_max_per_seq
+    }
+
     /// Get the `n_ubatch`
     ///
     /// # Examples
